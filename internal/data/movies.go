@@ -1,6 +1,10 @@
 package data
 
-import "time"
+import (
+	"time"
+
+	"github.com/ebenamoafo2/scalable-go-api/internal/validator"
+)
 
 type Movie struct {
 	ID        int64     `json:"id"`
@@ -10,4 +14,24 @@ type Movie struct {
 	Runtime   Runtime   `json:"runtime,omitzero"` //movie runtime in minutes
 	Genres    []string  `json:"genres,omitempty"`
 	Version   int32     `json:"version"`
+}
+
+func ValidateMovie(v *validator.Validator, movie *Movie) {
+	v.Check(movie.Title != "", "title", "must be provided")
+	v.Check(len(movie.Title) <= 500, "title", "must be at least 500 bytes long")
+
+	v.Check(movie.Year != 0, "year", "must be provided")
+	v.Check(movie.Year >= 1888, "year", "must be greater than 1888")
+	v.Check(movie.Year <= int32(time.Now().Year()), "year", "must not be in the future")
+
+	v.Check(movie.Runtime != 0, "runtime", "must be provided")
+	v.Check(movie.Runtime > 0, "runtime", "must be a positive integer/number")
+
+	v.Check(movie.Genres != nil, "genres", "must be provided")
+	v.Check(len(movie.Genres) >= 1, "genres", "must be at least one genre")
+	v.Check(len(movie.Genres) <= 5, "genres", "must not contain more than 5 genres")
+
+	//Check if all the values in the unique slice are unique
+	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
+
 }

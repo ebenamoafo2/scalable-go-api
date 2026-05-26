@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -37,5 +40,70 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data envelo
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_, _ = w.Write(js)
+	return nil
+}
+
+func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	//Use the http.MaxBytesReader to cap the request body at 1MB before any reading begins,
+	//preventing memory exhaustion from oversized payloads.
+	r.Body = http.MaxBytesReader(w, r.Body, 1_048_576)
+
+	//Create a new decoder from the request body
+	//and disallow unknown fields in the JSON
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	//Decode the json request body into the target destination
+	err := dec.Decode(dst)
+	if err != nil {
+		var syntaxError *json.SyntaxError
+		var unmarshallTypeError *json.UnmarshalTypeError
+		var invalidUnmarshalError *json.InvalidUnmarshalError
+		var maxBytesError *http.MaxBytesError
+
+		switch {
+
+		// Malformed JSON with a known character offset.
+		case errors.As(err, &syntaxError):
+			return fmt.Errorf("body contains badly formed-JSON (at character %d)", syntaxError.Offset)
+
+		// Malformed JSON with no recoverable offset.
+		case errors.Is(err, io.ErrUnexpectedEOF):
+			return errors.New("body contains badly formed-JSON")
+
+		// Wrong JSON type for a field; include field name if available, else offset.
+		case errors.As(err, &unmarshallTypeError):
+			if unmarshallTypeError.Field != "" {
+				return fmt.Errorf("body contains incorrect JSON type for the field %q", unmarshallTypeError.Field)
+			}
+			return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshallTypeError.Offset)
+
+		//Request body was empty
+		case errors.Is(err, io.EOF):
+			return errors.New("body must not be empty")
+
+		// Unknown field in the JSON body; extract and return the field name.
+		case strings.HasPrefix(err.Error(), "json: unknown field"):
+			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
+			return fmt.Errorf("body contains unknown key %s", fieldName)
+
+		//Request body was too large
+		case errors.As(err, &maxBytesError):
+			return fmt.Errorf("body must not be larger than %d bytes ", maxBytesError.Limit)
+
+		//dst was not a pointer to a struct- programming error, panic immediately
+		case errors.As(err, &invalidUnmarshalError):
+			panic(err)
+
+		default:
+			return err
+		}
+	}
+
+	//Ensure that the request body is fully consumed
+	err = dec.Decode(&struct{}{})
+	if !errors.Is(err, io.EOF) {
+		return errors.New("body must contain a single JSON value")
+	}
 	return nil
 }
