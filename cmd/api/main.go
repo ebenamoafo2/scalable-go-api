@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ebenamoafo2/scalable-go-api/internal/data"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -36,6 +37,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	models data.Models
 }
 
 func main() {
@@ -49,6 +51,7 @@ func main() {
 
 	flag.IntVar(&cfg.port, "port", 4000, "port to run the server on")
 	flag.StringVar(&cfg.env, "env", "development", "Environment(development|staging|production)")
+
 	flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
 
 	// Read the connection pool settings from command-line flags into the config struct.
@@ -100,6 +103,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
 
 	srv := &http.Server{
