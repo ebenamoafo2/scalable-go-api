@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/ebenamoafo2/scalable-go-api/internal/validator"
@@ -14,6 +15,26 @@ type Movie struct {
 	Runtime   Runtime   `json:"runtime,omitzero"` //movie runtime in minutes
 	Genres    []string  `json:"genres,omitempty"`
 	Version   int32     `json:"version"`
+}
+
+type MovieModel struct {
+	DB *sql.DB
+}
+
+func (m *MovieModel) Insert(movie *Movie) error {
+	return nil
+}
+
+func (m *MovieModel) Get(id int64) (*Movie, error) {
+	return nil, nil
+}
+
+func (m *MovieModel) Update(movie *Movie) error {
+	return nil
+}
+
+func (m *MovieModel) Delete(id int64) error {
+	return nil
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {
