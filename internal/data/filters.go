@@ -39,6 +39,28 @@ func (f Filters) limit() int {
 	return f.PageSize
 }
 
+// Metadata struct for holding pagination metadata
+type Metadata struct {
+	CurrentPage  int `json:"current_page,omitzero"`
+	PageSize     int `json:"page_size,omitzero"`
+	FirstPage    int `json:"first_page,omitzero"`
+	LastPage     int `json:"last_page,omitzero"`
+	TotalRecords int `json:"total_records,omitzero"`
+}
+
+func calculateMetadata(totalRecords, page, pageSize int) Metadata {
+	if totalRecords == 0 {
+		return Metadata{}
+	}
+	return Metadata{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		FirstPage:    1,
+		LastPage:     (totalRecords + pageSize - 1) / pageSize,
+		TotalRecords: totalRecords,
+	}
+}
+
 func ValidateFilters(v *validator.Validator, f Filters) {
 	//Check that the page and the page size are valid
 	v.Check(f.Page > 0, "page", "must be greater than  0")

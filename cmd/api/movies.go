@@ -211,12 +211,12 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	//Get the movies
-	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	movies, metadata, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 
-	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
