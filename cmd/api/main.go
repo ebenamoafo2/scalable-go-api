@@ -7,6 +7,7 @@ import (
 	"flag"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ebenamoafo2/scalable-go-api/internal/data"
@@ -50,6 +51,7 @@ type application struct {
 	logger *slog.Logger
 	models data.Models
 	mailer *mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 // main initializes the application configuration, connects to the database, handles migrations, and starts the server.
@@ -137,7 +139,6 @@ func main() {
 	}
 
 	err = app.serve()
-	logger.Error(err.Error())
 	os.Exit(1)
 }
 
