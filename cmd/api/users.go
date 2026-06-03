@@ -28,7 +28,6 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		Email:     input.Email,
 		Activated: false,
 	}
-	//Password.Set() will hash the password
 	err = user.Password.Set(input.Password)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
@@ -55,6 +54,15 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
+
+	//run the background job to send the welcome email
+	app.background(func() {
+		//send a welcome email
+		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
+		if err != nil {
+			app.logger.Error(err.Error())
+		}
+	})
 
 	err = app.writeJSON(w, http.StatusCreated, envelope{"user": user}, nil)
 	if err != nil {
