@@ -208,3 +208,10 @@ AND tokens.expiry > $3
 	}
 	return &user, nil
 }
+
+// Anonymous user
+var AnonymousUser = &User{}
+
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
+}
