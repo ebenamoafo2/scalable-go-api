@@ -3,17 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"flag"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/ebenamoafo2/scalable-go-api/internal/data"
 	"github.com/ebenamoafo2/scalable-go-api/internal/mailer"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"github.com/joho/godotenv"
@@ -43,6 +41,9 @@ type config struct {
 		username string
 		password string
 		sender   string
+	}
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -84,6 +85,10 @@ func main() {
 	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("GREENLIGHT_SMTP_PASSWORD"), "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", os.Getenv("GREENLIGHT_SMTP_SENDER"), "SMTP sender")
 
+	flag.Func("cors-trusted-origins", "Trusted CORS origins(space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -102,28 +107,6 @@ func main() {
 	}(db)
 
 	logger.Info("connected to database", "dsn", cfg.db.dsn)
-
-	migrationDriver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
-	migrationPath := os.Getenv("GREENLIGHT_MIGRATION_PATH")
-	migrator, err := migrate.NewWithDatabaseInstance(migrationPath,
-		"postgres", migrationDriver)
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
-	err = migrator.Up()
-	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
-	logger.Info("database migrated")
 
 	mailerClient, err := mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender)
 	if err != nil {
