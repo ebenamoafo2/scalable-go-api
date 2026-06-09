@@ -144,7 +144,7 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 		user := app.contextGetUser(r)
 
 		if user.IsAnonymous() {
-			app.authenticate(next).ServeHTTP(w, r)
+			app.authenticationRequiredResponse(w, r)
 			return
 		}
 		next.ServeHTTP(w, r)

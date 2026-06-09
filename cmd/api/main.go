@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime"
@@ -21,7 +22,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const version = "0.0.1"
+const version = "1.0.0"
 
 type config struct {
 	port int
@@ -70,7 +71,7 @@ func main() {
 	flag.IntVar(&cfg.port, "port", 4000, "port to run the server on")
 	flag.StringVar(&cfg.env, "env", "development", "Environment(development|staging|production)")
 
-	flag.StringVar(&cfg.db.dsn, "dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", "", "PostgreSQL DSN")
 
 	// Read the connection pool settings from command-line flags into the config struct.
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -91,7 +92,15 @@ func main() {
 		cfg.cors.trustedOrigins = strings.Fields(val)
 		return nil
 	})
+
+	displayVersion := flag.Bool("version", false, "display version and exit")
+
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		os.Exit(0)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
@@ -141,7 +150,10 @@ func main() {
 	}
 
 	err = app.serve()
-	os.Exit(1)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 }
 
 func openDB(cfg config) (*sql.DB, error) {
