@@ -15,6 +15,7 @@ import (
 
 	"github.com/ebenamoafo2/scalable-go-api/internal/data"
 	"github.com/ebenamoafo2/scalable-go-api/internal/mailer"
+	"github.com/ebenamoafo2/scalable-go-api/internal/vcs"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"github.com/joho/godotenv"
@@ -22,7 +23,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const version = "1.0.0"
+var (
+	version = vcs.Version()
+)
 
 type config struct {
 	port int
